@@ -60,7 +60,7 @@ def run_research(topic: str):
     llm = LLM(
     model="groq/openai/gpt-oss-120b",
     api_key=api_key,
-    max_tokens=1500
+    max_tokens=800
 )
 
     researcher = Agent(
@@ -91,44 +91,38 @@ def run_research(topic: str):
     research_task = Task(
 
         description=f"""
-        Research the following topic:
+Research this topic:
 
-        {topic}
+{topic}
 
-        Use DuckDuckGo to search the web.
+Use DuckDuckGo to find relevant and recent information.
 
-        Requirements:
+Requirements:
+- Search multiple relevant sources.
+- Prefer reliable sources.
+- Compare important information.
+- Do not invent facts or sources.
+- Keep the final report concise.
 
-        1. Search multiple times using different queries.
-        2. Find several relevant sources.
-        3. Prefer authoritative and recent sources.
-        4. Compare information between sources.
-        5. Do not invent facts.
-        6. Do not invent statistics.
-        7. Do not invent URLs.
+Write:
 
-        Write the report using this structure:
+# Research Report
 
-        # Research Report
+## Executive Summary
+A short summary.
 
-        ## Topic
+## Key Findings
+The most important findings.
 
-        ## Executive Summary
+## Analysis
+Explain the topic clearly.
 
-        ## Introduction
+## Conclusion
+A short conclusion.
 
-        ## Key Findings
-
-        ## Detailed Analysis
-
-        ## Benefits / Advantages
-
-        ## Challenges / Limitations
-
-        ## Conclusion
-
-        ## Sources
-
+## Sources
+List the URLs you used.
+"""
         Make the report clear and beginner-friendly.
         """,
 
