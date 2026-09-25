@@ -4,3 +4,4 @@ groq
 streamlit
 ddgs
 python-dotenv
+pydantic<2.12
