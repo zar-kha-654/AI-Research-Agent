@@ -58,9 +58,10 @@ def run_research(topic: str):
     search_tool = DuckDuckGoSearchTool()
 
     llm = LLM(
-        model="groq/openai/gpt-oss-120b",
-        api_key=api_key
-    )
+    model="groq/openai/gpt-oss-120b",
+    api_key=api_key,
+    max_tokens=1500
+)
 
     researcher = Agent(
 
