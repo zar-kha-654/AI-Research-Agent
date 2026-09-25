@@ -1,7 +1,3 @@
-import crewai.llms.cache as _crewai_cache
-
-_crewai_cache.mark_cache_breakpoint = lambda msg: msg
-
 import os
 
 from crewai import Agent, Task, Crew, LLM
@@ -9,179 +5,75 @@ from crewai.tools import BaseTool
 from ddgs import DDGS
 
 
-# ==========================================
-# DuckDuckGo Search Tool
-# ==========================================
-
 class DuckDuckGoSearchTool(BaseTool):
-
     name: str = "DuckDuckGo Search"
-
-    description: str = (
-        "Search the internet using DuckDuckGo "
-        "to find information about a research topic."
-    )
+    description: str = "Search the web using DuckDuckGo."
 
     def _run(self, query: str) -> str:
+        results = DDGS().text(query, max_results=3)
 
-        try:
-            results = DDGS().text(
-                query,
-                max_results=3
+        if not results:
+            return "No results found."
+
+        text = ""
+
+        for result in results:
+            text += (
+                f"Title: {result.get('title', '')}\n"
+                f"Summary: {result.get('body', '')}\n"
+                f"URL: {result.get('href', '')}\n\n"
             )
 
-            if not results:
-                return "No search results found."
-
-            output = []
-
-            for result in results:
-
-                title = result.get("title", "")
-                body = result.get("body", "")
-                url = result.get("href", "")
-
-                output.append(
-                    f"TITLE: {title}\n"
-                    f"SUMMARY: {body}\n"
-                    f"URL: {url}\n"
-                )
-
-            return "\n\n".join(output)
-
-        except Exception as e:
-
-            return f"Search error: {str(e)}"
+        return text
 
 
-# ==========================================
-# Research Agent
-# ==========================================
-
-def run_research(topic: str):
+def run_research(topic):
 
     api_key = os.getenv("GROQ_API_KEY")
-
-    if not api_key:
-        raise ValueError(
-            "GROQ_API_KEY is missing."
-        )
-
-    # --------------------------------------
-    # Search tool
-    # --------------------------------------
-
-    search_tool = DuckDuckGoSearchTool()
-
-    # --------------------------------------
-    # Groq LLM
-    # --------------------------------------
 
     llm = LLM(
         model="groq/openai/gpt-oss-120b",
         api_key=api_key,
-        max_tokens=800
+        max_tokens=500
     )
 
-    # --------------------------------------
-    # Single CrewAI Agent
-    # --------------------------------------
+    search_tool = DuckDuckGoSearchTool()
 
     researcher = Agent(
-
-        role="AI Research Analyst",
-
-        goal=(
-            "Research a topic using web search "
-            "and create a concise factual report."
-        ),
-
-        backstory=(
-            "You are an AI research analyst who searches "
-            "the web, compares information, and summarizes "
-            "reliable sources clearly."
-        ),
-
+        role="Research Analyst",
+        goal="Research the topic and create a factual report.",
+        backstory="You are a research analyst who searches the web.",
         tools=[search_tool],
-
         llm=llm,
-
-        verbose=True,
-
         allow_delegation=False
     )
 
-    # --------------------------------------
-    # Research Task
-    # --------------------------------------
-
-    research_task = Task(
-
+    task = Task(
         description=f"""
 Research this topic:
 
 {topic}
 
-Use DuckDuckGo to find relevant and recent information.
+Search the web and write a concise report.
 
-Requirements:
+Include:
 
-- Search multiple relevant sources.
-- Prefer reliable sources.
-- Compare important information.
-- Do not invent facts.
-- Do not invent sources.
-- Keep the final report concise.
+1. Executive Summary
+2. Key Findings
+3. Analysis
+4. Conclusion
+5. Sources with URLs
 
-Write:
-
-# Research Report
-
-## Executive Summary
-
-Give a short summary.
-
-## Key Findings
-
-List the most important findings.
-
-## Analysis
-
-Explain the topic clearly.
-
-## Conclusion
-
-Give a short conclusion.
-
-## Sources
-
-List the URLs you used.
+Do not invent facts or sources.
 """,
-
-        expected_output=(
-            "A concise research report with an executive summary, "
-            "key findings, analysis, conclusion, and source URLs."
-        ),
-
+        expected_output="A concise research report with sources.",
         agent=researcher
     )
 
-    # --------------------------------------
-    # Crew
-    # --------------------------------------
-
     crew = Crew(
-
         agents=[researcher],
-
-        tasks=[research_task],
-
-        verbose=True
+        tasks=[task]
     )
-
-    # --------------------------------------
-    # Run
-    # --------------------------------------
 
     result = crew.kickoff()
 
