@@ -2,19 +2,24 @@ import crewai.llms.cache as _crewai_cache
 
 _crewai_cache.mark_cache_breakpoint = lambda msg: msg
 
+import os
+
 from crewai import Agent, Task, Crew, LLM
 from crewai.tools import BaseTool
 from ddgs import DDGS
-import os
 
+
+# ==========================================
+# DuckDuckGo Search Tool
+# ==========================================
 
 class DuckDuckGoSearchTool(BaseTool):
 
     name: str = "DuckDuckGo Search"
 
     description: str = (
-        "Search the internet using DuckDuckGo to find "
-        "current and relevant information about a research topic."
+        "Search the internet using DuckDuckGo "
+        "to find information about a research topic."
     )
 
     def _run(self, query: str) -> str:
@@ -22,7 +27,7 @@ class DuckDuckGoSearchTool(BaseTool):
         try:
             results = DDGS().text(
                 query,
-                max_results=5
+                max_results=3
             )
 
             if not results:
@@ -42,41 +47,59 @@ class DuckDuckGoSearchTool(BaseTool):
                     f"URL: {url}\n"
                 )
 
-            return "\n".join(output)
+            return "\n\n".join(output)
 
         except Exception as e:
+
             return f"Search error: {str(e)}"
 
+
+# ==========================================
+# Research Agent
+# ==========================================
 
 def run_research(topic: str):
 
     api_key = os.getenv("GROQ_API_KEY")
 
     if not api_key:
-        raise ValueError("GROQ_API_KEY is missing.")
+        raise ValueError(
+            "GROQ_API_KEY is missing."
+        )
+
+    # --------------------------------------
+    # Search tool
+    # --------------------------------------
 
     search_tool = DuckDuckGoSearchTool()
 
+    # --------------------------------------
+    # Groq LLM
+    # --------------------------------------
+
     llm = LLM(
-    model="groq/openai/gpt-oss-120b",
-    api_key=api_key,
-    max_tokens=800
-)
+        model="groq/openai/gpt-oss-120b",
+        api_key=api_key,
+        max_tokens=800
+    )
+
+    # --------------------------------------
+    # Single CrewAI Agent
+    # --------------------------------------
 
     researcher = Agent(
 
         role="AI Research Analyst",
 
         goal=(
-            "Research the user's topic using web sources "
-            "and produce an accurate and well-structured report."
+            "Research a topic using web search "
+            "and create a concise factual report."
         ),
 
         backstory=(
-            "You are an experienced AI research analyst. "
-            "You search for relevant information, compare sources, "
-            "identify important facts, and explain complex topics "
-            "clearly."
+            "You are an AI research analyst who searches "
+            "the web, compares information, and summarizes "
+            "reliable sources clearly."
         ),
 
         tools=[search_tool],
@@ -88,6 +111,10 @@ def run_research(topic: str):
         allow_delegation=False
     )
 
+    # --------------------------------------
+    # Research Task
+    # --------------------------------------
+
     research_task = Task(
 
         description=f"""
@@ -98,10 +125,12 @@ Research this topic:
 Use DuckDuckGo to find relevant and recent information.
 
 Requirements:
+
 - Search multiple relevant sources.
 - Prefer reliable sources.
 - Compare important information.
-- Do not invent facts or sources.
+- Do not invent facts.
+- Do not invent sources.
 - Keep the final report concise.
 
 Write:
@@ -109,37 +138,50 @@ Write:
 # Research Report
 
 ## Executive Summary
-A short summary.
+
+Give a short summary.
 
 ## Key Findings
-The most important findings.
+
+List the most important findings.
 
 ## Analysis
+
 Explain the topic clearly.
 
 ## Conclusion
-A short conclusion.
+
+Give a short conclusion.
 
 ## Sources
+
 List the URLs you used.
-"""
-        Make the report clear and beginner-friendly.
-        """,
+""",
 
         expected_output=(
-            "A complete research report containing an executive summary, "
-            "introduction, key findings, detailed analysis, benefits, "
-            "limitations, conclusion, and source URLs."
+            "A concise research report with an executive summary, "
+            "key findings, analysis, conclusion, and source URLs."
         ),
 
         agent=researcher
     )
 
+    # --------------------------------------
+    # Crew
+    # --------------------------------------
+
     crew = Crew(
+
         agents=[researcher],
+
         tasks=[research_task],
+
         verbose=True
     )
+
+    # --------------------------------------
+    # Run
+    # --------------------------------------
 
     result = crew.kickoff()
 
