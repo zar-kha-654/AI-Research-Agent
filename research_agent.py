@@ -37,11 +37,11 @@ class DuckDuckGoSearchTool(BaseTool):
 def run_research(topic):
 
     llm = LLM(
-        model="groq/openai/gpt-oss-120b",
-        api_key=os.getenv("GROQ_API_KEY"),
-        max_completion_tokens=300,
-        temperature=0
-    )
+    model="groq/openai/gpt-oss-20b",
+    api_key=os.getenv("GROQ_API_KEY"),
+    max_completion_tokens=250,
+    temperature=0
+)
 
     search_tool = DuckDuckGoSearchTool()
 
